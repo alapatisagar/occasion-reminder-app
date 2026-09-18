@@ -117,10 +117,14 @@ async function fetchSettings() {
 
     const providerSelect = document.getElementById('setting_sms_provider');
     if (providerSelect) {
-      providerSelect.value = state.settings.sms_provider || 'fast2sms';
+      providerSelect.value = state.settings.sms_provider || 'whatsapp_cloud';
       toggleProviderSections();
     }
 
+    if (document.getElementById('setting_whatsapp_cloud_token')) {
+      document.getElementById('setting_whatsapp_cloud_token').value = state.settings.whatsapp_cloud_token || '';
+      document.getElementById('setting_whatsapp_cloud_phone_id').value = state.settings.whatsapp_cloud_phone_id || '';
+    }
     if (document.getElementById('setting_fast2sms_api_key')) {
       document.getElementById('setting_fast2sms_api_key').value = state.settings.fast2sms_api_key || '';
     }
@@ -131,9 +135,9 @@ async function fetchSettings() {
 
 function toggleProviderSections() {
   const provider = document.getElementById('setting_sms_provider').value;
+  document.getElementById('section_whatsapp_cloud').classList.toggle('hidden', provider !== 'whatsapp_cloud');
   document.getElementById('section_fast2sms').classList.toggle('hidden', provider !== 'fast2sms');
   document.getElementById('section_email_to_sms').classList.toggle('hidden', provider !== 'email_to_sms');
-  document.getElementById('section_whatsapp').classList.toggle('hidden', provider !== 'whatsapp');
 }
 
 function updateDashboardStats() {
@@ -190,7 +194,7 @@ function renderDashboardTable() {
         </td>
         <td class="px-6 py-4 text-right space-x-2">
           <button onclick="handleSendNow(${occ.id})" title="Send Direct Message Now" class="text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-700 px-3 py-1.5 rounded-lg transition font-medium">
-            <i class="fa-solid fa-paper-plane mr-1"></i> Send SMS Now
+            <i class="fa-solid fa-paper-plane mr-1"></i> Send Now
           </button>
           <button onclick="openOccasionModal(${occ.id})" class="text-slate-400 hover:text-slate-600 px-2 py-1">
             <i class="fa-solid fa-pen"></i>
@@ -255,7 +259,7 @@ function renderOccasionsGrid() {
         <div class="pt-3 border-t border-slate-100 flex items-center justify-between">
           <button onclick="handleSendNow(${occ.id})" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 rounded-xl transition font-medium flex items-center space-x-1.5 shadow-sm">
             <i class="fa-solid fa-paper-plane text-[10px]"></i>
-            <span>Send SMS Now</span>
+            <span>Send Now</span>
           </button>
           <div class="space-x-1">
             <button onclick="openOccasionModal(${occ.id})" class="p-2 text-slate-400 hover:text-emerald-600 rounded-lg hover:bg-slate-50 transition">
@@ -320,7 +324,7 @@ function openOccasionModal(id = null) {
   if (id) {
     const occ = state.occasions.find(o => o.id === id);
     if (occ) {
-      document.getElementById('modalTitle').textContent = 'Edit SMS Contact';
+      document.getElementById('modalTitle').textContent = 'Edit Contact Occasion';
       document.getElementById('occasion_id').value = occ.id;
       document.getElementById('recipient_name').value = occ.recipient_name;
       document.getElementById('recipient_phone').value = occ.recipient_phone || occ.recipient_email;
@@ -330,7 +334,7 @@ function openOccasionModal(id = null) {
       document.getElementById('custom_message').value = occ.custom_message;
     }
   } else {
-    document.getElementById('modalTitle').textContent = 'Add SMS Contact';
+    document.getElementById('modalTitle').textContent = 'Add Contact Occasion';
     document.getElementById('occasion_id').value = '';
     document.getElementById('custom_message').value = 'Wishing you the happiest {occasion}, {name}! May your day be filled with endless joy!';
   }
@@ -371,7 +375,7 @@ async function handleSaveOccasion(e) {
     if (!res.ok) throw new Error(data.error || 'Failed to save');
 
     closeOccasionModal();
-    showAlert(id ? 'Contact updated!' : 'New SMS contact scheduled!', 'success');
+    showAlert(id ? 'Contact updated!' : 'New contact scheduled!', 'success');
     await initApp();
   } catch (err) {
     showAlert(err.message, 'error');
@@ -394,17 +398,17 @@ async function handleDeleteOccasion(id) {
 }
 
 async function handleSendNow(id) {
-  showAlert('Sending Fast2SMS text message directly to mobile phone...', 'info');
+  showAlert('Sending background message directly to recipient...', 'info');
   try {
     const res = await fetch(`/api/send-now/${id}`, { method: 'POST' });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error || (data.details ? data.details : 'Failed to send SMS'));
+    if (!res.ok) throw new Error(data.error || (data.details ? data.details : 'Failed to send message'));
 
     if (data.details && data.details.whatsappUrl) {
       window.open(data.details.whatsappUrl, '_blank');
       showAlert('WhatsApp Direct Message link opened!', 'success');
     } else {
-      showAlert(data.message || 'SMS sent successfully!', 'success');
+      showAlert(data.message || 'Message sent successfully in background!', 'success');
     }
 
     await fetchLogs();
@@ -416,7 +420,7 @@ async function handleSendNow(id) {
 }
 
 async function handleTriggerAutoDispatch() {
-  showAlert('Running automated background SMS dispatcher check...', 'info');
+  showAlert('Running automated background dispatcher check...', 'info');
   try {
     const res = await fetch('/api/trigger-dispatch', { method: 'POST' });
     const data = await res.json();
@@ -436,7 +440,9 @@ async function handleSaveSettings(e) {
   e.preventDefault();
   const payload = {
     sms_provider: document.getElementById('setting_sms_provider').value,
-    fast2sms_api_key: document.getElementById('setting_fast2sms_api_key').value
+    whatsapp_cloud_token: document.getElementById('setting_whatsapp_cloud_token')?.value || '',
+    whatsapp_cloud_phone_id: document.getElementById('setting_whatsapp_cloud_phone_id')?.value || '',
+    fast2sms_api_key: document.getElementById('setting_fast2sms_api_key')?.value || ''
   };
 
   try {
@@ -448,7 +454,7 @@ async function handleSaveSettings(e) {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Failed to save settings');
 
-    showAlert('Fast2SMS Provider settings saved successfully!', 'success');
+    showAlert('Provider settings saved successfully!', 'success');
     await fetchSettings();
   } catch (err) {
     showAlert(err.message, 'error');

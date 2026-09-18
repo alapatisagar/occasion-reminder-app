@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Occasion Auto-Sender | Fast2SMS & Free Messaging</title>
+  <title>Occasion Auto-Sender | Automated WhatsApp & SMS</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
@@ -25,7 +25,7 @@
         </div>
         <div>
           <h1 class="text-2xl font-bold tracking-tight">Occasion Auto-Sender</h1>
-          <p class="text-xs text-teal-100 font-medium">Automatic Text Message Sender for Birthdays & Anniversaries</p>
+          <p class="text-xs text-teal-100 font-medium">100% Background Automated WhatsApp & SMS Text Messages</p>
         </div>
       </div>
       <button id="triggerDispatcherBtn" class="w-full sm:w-auto bg-yellow-400 hover:bg-yellow-300 text-slate-900 px-4 py-2.5 rounded-xl font-semibold text-sm shadow-md hover:shadow-lg transition flex items-center justify-center space-x-2">
@@ -52,7 +52,7 @@
       </button>
       <button onclick="switchTab('settings')" id="tab-settings" class="py-4 px-2 text-slate-600 hover:text-emerald-600 transition flex items-center space-x-2">
         <i class="fa-solid fa-sliders"></i>
-        <span>SMS Provider Settings</span>
+        <span>Provider Settings</span>
       </button>
     </div>
   </nav>
@@ -88,7 +88,7 @@
         </div>
         <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
           <div>
-            <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">SMS Delivered</p>
+            <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Messages Delivered</p>
             <h3 id="statSent" class="text-3xl font-extrabold text-cyan-600 mt-1">0</h3>
           </div>
           <div class="p-4 bg-cyan-50 text-cyan-600 rounded-2xl">
@@ -99,8 +99,8 @@
 
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4">
         <div>
-          <h2 class="text-xl font-bold text-slate-900">Scheduled Text Messages</h2>
-          <p class="text-sm text-slate-500">Automated SMS messages scheduled for auto-delivery</p>
+          <h2 class="text-xl font-bold text-slate-900">Scheduled Messages</h2>
+          <p class="text-sm text-slate-500">Automated WhatsApp & SMS text messages scheduled for auto-delivery</p>
         </div>
         <button onclick="openOccasionModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl text-sm font-medium shadow-sm transition flex items-center justify-center space-x-2">
           <i class="fa-solid fa-plus"></i>
@@ -114,7 +114,7 @@
             <thead class="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wider">
               <tr>
                 <th class="px-6 py-4">Recipient</th>
-                <th class="px-6 py-4">Mobile Phone</th>
+                <th class="px-6 py-4">Mobile Number</th>
                 <th class="px-6 py-4">Occasion</th>
                 <th class="px-6 py-4">Date</th>
                 <th class="px-6 py-4 text-right">Actions</th>
@@ -163,7 +163,7 @@
     <div id="view-logs" class="hidden space-y-6">
       <div>
         <h2 class="text-xl font-bold text-slate-900">Sent History Logs</h2>
-        <p class="text-sm text-slate-500">Audit trail of SMS messages delivered to recipients</p>
+        <p class="text-sm text-slate-500">Audit trail of automated messages delivered to recipients</p>
       </div>
 
       <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
@@ -188,11 +188,11 @@
       </div>
     </div>
 
-    <!-- VIEW: SMS SETTINGS -->
+    <!-- VIEW: SETTINGS -->
     <div id="view-settings" class="hidden space-y-6 max-w-3xl mx-auto">
       <div>
-        <h2 class="text-xl font-bold text-slate-900">SMS Provider Settings</h2>
-        <p class="text-sm text-slate-500">Configure your Fast2SMS API Key or Free Provider Options</p>
+        <h2 class="text-xl font-bold text-slate-900">100% Background Auto-Send Settings</h2>
+        <p class="text-sm text-slate-500">Configure background automated WhatsApp, Fast2SMS, or Free Email</p>
       </div>
 
       <div class="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-sm space-y-6">
@@ -200,37 +200,46 @@
           <div>
             <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Select Provider Method</label>
             <select id="setting_sms_provider" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-emerald-700 focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+              <option value="whatsapp_cloud">💬 Meta WhatsApp Cloud API (100% Background, 1,000 Free Messages/Month)</option>
               <option value="fast2sms">⚡ Fast2SMS (Direct SMS to Indian Mobile Numbers)</option>
-              <option value="email_to_sms">🎉 Free Carrier Email-to-SMS Gateway</option>
-              <option value="whatsapp">💬 WhatsApp Direct Messaging</option>
+              <option value="email_to_sms">🎉 Free Email / Carrier Gateway (Zero Cost)</option>
             </select>
           </div>
 
-          <div id="section_fast2sms" class="space-y-3">
+          <!-- Section: Meta WhatsApp Cloud API -->
+          <div id="section_whatsapp_cloud" class="space-y-4">
             <div class="bg-emerald-50 border border-emerald-200 p-4 rounded-xl text-xs text-emerald-900 space-y-1">
               <p class="font-bold flex items-center space-x-1 text-emerald-700">
-                <i class="fa-solid fa-key"></i>
-                <span>Fast2SMS Quick SMS API Key</span>
+                <i class="fa-brands fa-whatsapp text-base"></i>
+                <span>100% Background Automated WhatsApp Messaging</span>
               </p>
-              <p>Paste your API Key from <strong>fast2sms.com -> Dev API</strong>. Text messages will be sent via Fast2SMS Quick SMS!</p>
+              <p>Messages send <strong>100% automatically in the background</strong> without opening WhatsApp! Get your free Permanent Token and Phone Number ID from <a href="https://developers.facebook.com" target="_blank" class="underline font-bold">developers.facebook.com</a> (1,000 free messages/month).</p>
             </div>
-            <label class="block text-xs font-semibold text-slate-700 uppercase">Fast2SMS API Key *</label>
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">WhatsApp Access Token</label>
+              <input type="password" id="setting_whatsapp_cloud_token" placeholder="EAAxxxxx" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none font-mono">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">WhatsApp Phone Number ID</label>
+              <input type="text" id="setting_whatsapp_cloud_phone_id" placeholder="102xxxxxxxx" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none font-mono">
+            </div>
+          </div>
+
+          <!-- Section: Fast2SMS -->
+          <div id="section_fast2sms" class="hidden space-y-3">
+            <label class="block text-xs font-semibold text-slate-700 uppercase">Fast2SMS API Key</label>
             <input type="text" id="setting_fast2sms_api_key" placeholder="Paste your Fast2SMS API Key here" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none font-mono">
           </div>
 
+          <!-- Section: Free Email -->
           <div id="section_email_to_sms" class="hidden bg-slate-50 border border-slate-200 p-4 rounded-xl text-xs text-slate-700 space-y-2">
-            <p class="font-bold">Carrier Email-to-SMS Gateway Mode</p>
-            <p>Sends text messages via carrier gateway email addresses.</p>
-          </div>
-
-          <div id="section_whatsapp" class="hidden bg-teal-50 border border-teal-200 p-4 rounded-xl text-xs text-teal-900 space-y-2">
-            <p class="font-bold">WhatsApp Direct Messaging Mode</p>
-            <p>Generates instant WhatsApp direct text links on scheduled dates.</p>
+            <p class="font-bold">Free Email / Gateway Mode</p>
+            <p>Background server sends emails automatically every morning at 08:00 AM.</p>
           </div>
 
           <div class="pt-4">
             <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2.5 rounded-xl font-medium text-sm shadow-sm transition justify-center">
-              Save SMS Settings
+              Save Provider Settings
             </button>
           </div>
         </form>
@@ -247,8 +256,8 @@
       </button>
 
       <div>
-        <h3 id="modalTitle" class="text-xl font-bold text-slate-900">Add SMS Contact</h3>
-        <p class="text-xs text-slate-500">Text message will automatically send to mobile phone on this date</p>
+        <h3 id="modalTitle" class="text-xl font-bold text-slate-900">Add Scheduled Contact</h3>
+        <p class="text-xs text-slate-500">Automated background message will send on this date</p>
       </div>
 
       <form id="occasionForm" class="space-y-4">
@@ -315,7 +324,7 @@
   </div>
 
   <footer class="bg-white border-t border-slate-200 py-6 text-center text-xs text-slate-400">
-    <p>Occasion Auto-Sender &copy; 2026. Fast2SMS & Free Messaging.</p>
+    <p>Occasion Auto-Sender &copy; 2026. 100% Background Automated Messaging.</p>
   </footer>
 
   <script src="app.js"></script>

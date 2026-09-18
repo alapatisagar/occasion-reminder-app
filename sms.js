@@ -5,7 +5,7 @@ const { sendOccasionEmail } = require('./mailer');
 
 async function sendOccasionSMS({ toPhone, carrierGateway, recipientName, occasionType, customMessage }) {
   const provider = await dbQuery.get('SELECT value FROM settings WHERE key = "sms_provider"');
-  const providerType = provider?.value || 'fast2sms'; // Default to fast2sms or email_to_sms
+  const providerType = provider?.value || 'whatsapp_cloud'; // 'whatsapp_cloud', 'fast2sms', 'email_to_sms'
 
   // Format message text
   let formattedMessage = customMessage
@@ -14,16 +14,87 @@ async function sendOccasionSMS({ toPhone, carrierGateway, recipientName, occasio
 
   const smsText = `🎉 Happy ${occasionType}, ${recipientName}! ${formattedMessage}`;
   let cleanPhone = toPhone.replace(/[^0-9]/g, '');
-  if (cleanPhone.length > 10) cleanPhone = cleanPhone.slice(-10); // 10 digit Indian number
+  if (cleanPhone.length > 10 && cleanPhone.startsWith('91')) {
+    // Keep country code
+  } else if (cleanPhone.length === 10) {
+    cleanPhone = '91' + cleanPhone; // Default to India country code
+  }
 
   // -------------------------------------------------------------------
-  // METHOD 1: FAST2SMS API (DLT-Free Quick SMS Route)
+  // METHOD 1: OFFICIAL META WHATSAPP CLOUD API (100% Background, 1,000 Free/Month)
+  // -------------------------------------------------------------------
+  if (providerType === 'whatsapp_cloud') {
+    const waToken = await dbQuery.get('SELECT value FROM settings WHERE key = "whatsapp_cloud_token"');
+    const waPhoneId = await dbQuery.get('SELECT value FROM settings WHERE key = "whatsapp_cloud_phone_id"');
+
+    if (!waToken?.value || !waPhoneId?.value) {
+      // Fallback: If Meta WhatsApp Cloud credentials not configured yet, generate direct WhatsApp link
+      const waLink = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(smsText)}`;
+      return {
+        status: 'SUCCESS',
+        messageId: `wa-link-${Date.now()}`,
+        details: `WhatsApp Link Created for ${cleanPhone}. (Add WhatsApp Cloud API Token in Settings for 100% background auto-send)`,
+        whatsappUrl: waLink
+      };
+    }
+
+    return new Promise((resolve, reject) => {
+      const postData = JSON.stringify({
+        messaging_product: 'whatsapp',
+        to: cleanPhone,
+        type: 'text',
+        text: { body: smsText }
+      });
+
+      const options = {
+        hostname: 'graph.facebook.com',
+        port: 443,
+        path: `/v18.0/${waPhoneId.value}/messages`,
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${waToken.value}`,
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(postData)
+        }
+      };
+
+      const req = https.request(options, (res) => {
+        let body = '';
+        res.on('data', chunk => { body += chunk; });
+        res.on('end', () => {
+          try {
+            const parsed = JSON.parse(body);
+            if (res.statusCode >= 200 && res.statusCode < 300) {
+              resolve({
+                status: 'SUCCESS',
+                messageId: parsed.messages ? parsed.messages[0].id : `wa-cloud-${Date.now()}`,
+                details: `WhatsApp Cloud API automated background message sent to +${cleanPhone}`
+              });
+            } else {
+              reject(new Error(parsed.error ? parsed.error.message : `WhatsApp Cloud error ${res.statusCode}`));
+            }
+          } catch (e) {
+            reject(new Error(`WhatsApp Cloud response parse error: ${body}`));
+          }
+        });
+      });
+
+      req.on('error', err => reject(new Error(`WhatsApp Cloud connection error: ${err.message}`)));
+      req.write(postData);
+      req.end();
+    });
+  }
+
+  // -------------------------------------------------------------------
+  // METHOD 2: FAST2SMS API (DLT-Free Quick SMS Route)
   // -------------------------------------------------------------------
   if (providerType === 'fast2sms') {
     const apiKey = await dbQuery.get('SELECT value FROM settings WHERE key = "fast2sms_api_key"');
     if (!apiKey?.value) {
       throw new Error('Fast2SMS API Key is missing! Please paste your API Key in Settings.');
     }
+
+    let indianNumber = cleanPhone.slice(-10);
 
     return new Promise((resolve, reject) => {
       const queryParams = querystring.stringify({
@@ -32,7 +103,7 @@ async function sendOccasionSMS({ toPhone, carrierGateway, recipientName, occasio
         message: smsText,
         language: 'english',
         flash: '0',
-        numbers: cleanPhone
+        numbers: indianNumber
       });
 
       const options = {
@@ -52,13 +123,13 @@ async function sendOccasionSMS({ toPhone, carrierGateway, recipientName, occasio
               resolve({
                 status: 'SUCCESS',
                 messageId: parsed.request_id || `fast2sms-${Date.now()}`,
-                details: `Fast2SMS delivered to ${cleanPhone}: ${parsed.message ? parsed.message[0] : 'SMS Dispatched'}`
+                details: `Fast2SMS delivered to ${indianNumber}: ${parsed.message ? parsed.message[0] : 'SMS Dispatched'}`
               });
             } else {
-              reject(new Error(parsed.message || `Fast2SMS error (Code: ${parsed.status_code})`));
+              reject(new Error(parsed.message || `Fast2SMS error: ${body}`));
             }
           } catch (e) {
-            reject(new Error(`Fast2SMS response parse error: ${body}`));
+            reject(new Error(`Fast2SMS parse error: ${body}`));
           }
         });
       });
@@ -69,20 +140,7 @@ async function sendOccasionSMS({ toPhone, carrierGateway, recipientName, occasio
   }
 
   // -------------------------------------------------------------------
-  // METHOD 2: WHATSAPP DIRECT MESSAGE
-  // -------------------------------------------------------------------
-  if (providerType === 'whatsapp') {
-    const waLink = `https://api.whatsapp.com/send?phone=91${cleanPhone}&text=${encodeURIComponent(smsText)}`;
-    return {
-      status: 'SUCCESS',
-      messageId: `wa-${Date.now()}`,
-      details: `WhatsApp Direct Link Created: ${waLink}`,
-      whatsappUrl: waLink
-    };
-  }
-
-  // -------------------------------------------------------------------
-  // METHOD 3: 100% FREE EMAIL-TO-SMS CARRIER GATEWAY
+  // METHOD 3: 100% FREE AUTOMATED EMAIL
   // -------------------------------------------------------------------
   let smsEmail = toPhone;
   if (!toPhone.includes('@')) {
@@ -107,7 +165,7 @@ async function sendOccasionSMS({ toPhone, carrierGateway, recipientName, occasio
       details: `Free Message dispatched to ${smsEmail}`
     };
   } catch (err) {
-    throw new Error(`Free Email-to-SMS error: ${err.message}`);
+    throw new Error(`Free Email error: ${err.message}`);
   }
 }
 
