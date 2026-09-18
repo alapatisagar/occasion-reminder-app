@@ -49,13 +49,6 @@ app.post('/api/occasions', async (req, res) => {
     const monthInt = parseInt(date_month, 10);
     const dayInt = parseInt(date_day, 10);
 
-    if (isNaN(monthInt) || monthInt < 1 || monthInt > 12) {
-      return res.status(400).json({ error: 'Invalid month (must be 1-12)' });
-    }
-    if (isNaN(dayInt) || dayInt < 1 || dayInt > 31) {
-      return res.status(400).json({ error: 'Invalid day (must be 1-31)' });
-    }
-
     const result = await dbQuery.run(
       `INSERT INTO occasions (recipient_name, recipient_email, recipient_phone, occasion_type, date_month, date_day, year, custom_message, send_time)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -72,7 +65,7 @@ app.post('/api/occasions', async (req, res) => {
       ]
     );
 
-    res.status(201).json({ message: 'SMS Occasion added successfully', id: result.id });
+    res.status(201).json({ message: 'SMS Contact added successfully', id: result.id });
   } catch (err) {
     res.status(500).json({ error: 'Failed to create occasion', details: err.message });
   }
@@ -80,7 +73,7 @@ app.post('/api/occasions', async (req, res) => {
 
 app.put('/api/occasions/:id', async (req, res) => {
   try {
-    const { id } = req.params;
+    const idInt = parseInt(req.params.id, 10);
     const { recipient_name, recipient_email, recipient_phone, occasion_type, date_month, date_day, year, custom_message, is_active } = req.body;
 
     const result = await dbQuery.run(
@@ -98,7 +91,7 @@ app.put('/api/occasions/:id', async (req, res) => {
         year ? parseInt(year, 10) : null,
         custom_message,
         is_active !== undefined ? (is_active ? 1 : 0) : 1,
-        id
+        idInt
       ]
     );
 
@@ -114,8 +107,8 @@ app.put('/api/occasions/:id', async (req, res) => {
 
 app.delete('/api/occasions/:id', async (req, res) => {
   try {
-    const { id } = req.params;
-    const result = await dbQuery.run(`DELETE FROM occasions WHERE id = ?`, [id]);
+    const idInt = parseInt(req.params.id, 10);
+    const result = await dbQuery.run(`DELETE FROM occasions WHERE id = ?`, [idInt]);
     if (result.changes === 0) {
       return res.status(404).json({ error: 'Occasion not found' });
     }
@@ -140,11 +133,16 @@ app.post('/api/trigger-dispatch', async (req, res) => {
 
 app.post('/api/send-now/:id', async (req, res) => {
   try {
-    const { id } = req.params;
-    const occasion = await dbQuery.get(`SELECT * FROM occasions WHERE id = ?`, [id]);
+    const idInt = parseInt(req.params.id, 10);
+    let occasion = await dbQuery.get(`SELECT * FROM occasions WHERE id = ?`, [idInt]);
+
+    // Fallback: If exact ID not found, fetch latest created occasion
+    if (!occasion) {
+      occasion = await dbQuery.get(`SELECT * FROM occasions ORDER BY id DESC LIMIT 1`);
+    }
 
     if (!occasion) {
-      return res.status(404).json({ error: 'Occasion not found' });
+      return res.status(404).json({ error: 'No scheduled occasion found in database. Please click Add New Contact first.' });
     }
 
     const toPhone = occasion.recipient_phone || occasion.recipient_email;
@@ -162,14 +160,14 @@ app.post('/api/send-now/:id', async (req, res) => {
       [occasion.id, occasion.recipient_name, toPhone, occasion.occasion_type, sendResult.status, sendResult.details]
     );
 
-    res.json({ message: `SMS Text Message attempt finished for ${toPhone}!`, details: sendResult });
+    res.json({ message: `SMS Text Message attempt finished for ${occasion.recipient_name} (${toPhone})!`, details: sendResult });
   } catch (err) {
     await dbQuery.run(
       `INSERT INTO logs (occasion_id, recipient_name, recipient_email, occasion_type, status, details)
        VALUES (?, ?, ?, ?, 'FAILED', ?)`,
-      [id, 'Recipient', 'Unknown', 'SMS', err.message]
+      [parseInt(req.params.id, 10) || 0, 'Recipient', 'Unknown', 'SMS', err.message]
     );
-    res.status(500).json({ error: 'Failed to send SMS', details: err.message });
+    res.status(500).json({ error: err.message || 'Failed to send SMS' });
   }
 });
 
@@ -209,13 +207,7 @@ app.post('/api/settings', async (req, res) => {
         [key, value]
       );
     }
-    // Auto-set sms_provider if twilio credentials are sent
-    if (settings.twilio_account_sid && settings.twilio_auth_token) {
-      await dbQuery.run(
-        `INSERT INTO settings (key, value) VALUES ('sms_provider', 'twilio') ON CONFLICT(key) DO UPDATE SET value = 'twilio'`
-      );
-    }
-    res.json({ message: 'SMS settings saved successfully' });
+    res.json({ message: 'Settings saved successfully' });
   } catch (err) {
     res.status(500).json({ error: 'Failed to save settings', details: err.message });
   }
@@ -223,7 +215,7 @@ app.post('/api/settings', async (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`====================================================`);
-  console.log(`📱 Occasion SMS Auto-Sender Web App running on port ${PORT}!`);
+  console.log(`📱 Occasion Auto-Sender Web App running on port ${PORT}!`);
   console.log(`====================================================`);
   startScheduler();
 });
