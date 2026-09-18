@@ -7,11 +7,13 @@ async function sendOccasionSMS({ toPhone, carrierGateway, recipientName, occasio
   const provider = await dbQuery.get('SELECT value FROM settings WHERE key = "sms_provider"');
   const providerType = provider?.value || 'whatsapp_cloud';
 
+  // Format your actual personalized custom message!
   let formattedMessage = customMessage
     .replace(/\{name\}/gi, recipientName)
     .replace(/\{occasion\}/gi, occasionType);
 
-  const smsText = `🎉 Happy ${occasionType}, ${recipientName}! ${formattedMessage}`;
+  const smsText = `🎉 Happy ${occasionType}, ${recipientName}!\n\n${formattedMessage}`;
+
   let cleanPhone = toPhone.replace(/[^0-9]/g, '');
   if (cleanPhone.length > 10 && cleanPhone.startsWith('91')) {
     // Keep country code
@@ -20,7 +22,7 @@ async function sendOccasionSMS({ toPhone, carrierGateway, recipientName, occasio
   }
 
   // -------------------------------------------------------------------
-  // METHOD 1: META WHATSAPP CLOUD API (100% Background)
+  // METHOD 1: META WHATSAPP CLOUD API (Custom Text Message Dispatch)
   // -------------------------------------------------------------------
   if (providerType === 'whatsapp_cloud') {
     const waToken = await dbQuery.get('SELECT value FROM settings WHERE key = "whatsapp_cloud_token"');
@@ -36,15 +38,16 @@ async function sendOccasionSMS({ toPhone, carrierGateway, recipientName, occasio
       };
     }
 
-    // Try Meta Template Message (Meta requires template for initial outreach)
+    // Send your actual custom text message directly to recipient's WhatsApp!
     return new Promise((resolve, reject) => {
       const postData = JSON.stringify({
         messaging_product: 'whatsapp',
+        recipient_type: 'individual',
         to: cleanPhone,
-        type: 'template',
-        template: {
-          name: 'hello_world',
-          language: { code: 'en_US' }
+        type: 'text',
+        text: {
+          preview_url: false,
+          body: smsText
         }
       });
 
@@ -70,12 +73,15 @@ async function sendOccasionSMS({ toPhone, carrierGateway, recipientName, occasio
               resolve({
                 status: 'SUCCESS',
                 messageId: parsed.messages ? parsed.messages[0].id : `wa-cloud-${Date.now()}`,
-                details: `WhatsApp Cloud API automated background message delivered to +${cleanPhone} (ID: ${parsed.messages[0].id})`
+                details: `Custom WhatsApp message delivered to +${cleanPhone} (ID: ${parsed.messages[0].id})`
               });
             } else if (parsed.error && parsed.error.code === 190) {
-              reject(new Error(`Meta Access Token Expired. Please copy the current Access Token from your Meta Developers screen and paste it in Provider Settings.`));
+              reject(new Error(`Meta Access Token Expired. Please copy the fresh token from your Meta Developers screen.`));
             } else {
-              reject(new Error(parsed.error ? parsed.error.message : `WhatsApp Cloud error ${res.statusCode}`));
+              // Fallback to template if Meta requires template for initial outreach
+              sendMetaTemplate({ waPhoneId: waPhoneId.value, waToken: waToken.value, cleanPhone })
+                .then(resolve)
+                .catch(() => reject(new Error(parsed.error ? parsed.error.message : `WhatsApp Cloud error ${res.statusCode}`)));
             }
           } catch (e) {
             reject(new Error(`WhatsApp Cloud parse error: ${body}`));
@@ -171,6 +177,57 @@ async function sendOccasionSMS({ toPhone, carrierGateway, recipientName, occasio
   } catch (err) {
     throw new Error(`Free Email error: ${err.message}`);
   }
+}
+
+function sendMetaTemplate({ waPhoneId, waToken, cleanPhone }) {
+  return new Promise((resolve, reject) => {
+    const postData = JSON.stringify({
+      messaging_product: 'whatsapp',
+      to: cleanPhone,
+      type: 'template',
+      template: {
+        name: 'hello_world',
+        language: { code: 'en_US' }
+      }
+    });
+
+    const options = {
+      hostname: 'graph.facebook.com',
+      port: 443,
+      path: `/v18.0/${waPhoneId}/messages`,
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${waToken.trim()}`,
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(postData)
+      }
+    };
+
+    const req = https.request(options, (res) => {
+      let body = '';
+      res.on('data', chunk => { body += chunk; });
+      res.on('end', () => {
+        try {
+          const parsed = JSON.parse(body);
+          if (res.statusCode >= 200 && res.statusCode < 300) {
+            resolve({
+              status: 'SUCCESS',
+              messageId: parsed.messages ? parsed.messages[0].id : `wa-cloud-${Date.now()}`,
+              details: `WhatsApp Cloud API test message delivered to +${cleanPhone}`
+            });
+          } else {
+            reject(new Error(parsed.error ? parsed.error.message : `WhatsApp Cloud error ${res.statusCode}`));
+          }
+        } catch (e) {
+          reject(new Error(`WhatsApp Cloud parse error: ${body}`));
+        }
+      });
+    });
+
+    req.on('error', err => reject(new Error(`WhatsApp Cloud connection error: ${err.message}`)));
+    req.write(postData);
+    req.end();
+  });
 }
 
 module.exports = { sendOccasionSMS };
