@@ -36,13 +36,16 @@ async function sendOccasionSMS({ toPhone, carrierGateway, recipientName, occasio
       };
     }
 
-    // Try text payload first, then fallback to template if restricted
+    // Try Meta Template Message (Meta requires template for initial outreach)
     return new Promise((resolve, reject) => {
       const postData = JSON.stringify({
         messaging_product: 'whatsapp',
         to: cleanPhone,
-        type: 'text',
-        text: { body: smsText }
+        type: 'template',
+        template: {
+          name: 'hello_world',
+          language: { code: 'en_US' }
+        }
       });
 
       const options = {
@@ -67,16 +70,15 @@ async function sendOccasionSMS({ toPhone, carrierGateway, recipientName, occasio
               resolve({
                 status: 'SUCCESS',
                 messageId: parsed.messages ? parsed.messages[0].id : `wa-cloud-${Date.now()}`,
-                details: `WhatsApp Cloud API automated background message sent to +${cleanPhone}`
+                details: `WhatsApp Cloud API automated background message delivered to +${cleanPhone} (ID: ${parsed.messages[0].id})`
               });
-            } else if (parsed.error && (parsed.error.code === 190 || parsed.error.code === 100)) {
-              // Token expired error (code 190)
-              reject(new Error(`Meta WhatsApp Token Error: ${parsed.error.message}. Please click "Generate new token" on Meta Developer page and save in Settings.`));
+            } else if (parsed.error && parsed.error.code === 190) {
+              reject(new Error(`Meta Access Token Expired. Please copy the current Access Token from your Meta Developers screen and paste it in Provider Settings.`));
             } else {
               reject(new Error(parsed.error ? parsed.error.message : `WhatsApp Cloud error ${res.statusCode}`));
             }
           } catch (e) {
-            reject(new Error(`WhatsApp Cloud response parse error: ${body}`));
+            reject(new Error(`WhatsApp Cloud parse error: ${body}`));
           }
         });
       });
