@@ -29,7 +29,6 @@ app.use(express.static(path.join(__dirname, 'public')));
 // API ROUTES: OCCASIONS (CRUD)
 // -------------------------------------------------------------
 
-// Get all occasions
 app.get('/api/occasions', async (req, res) => {
   try {
     const occasions = await dbQuery.all(`SELECT * FROM occasions ORDER BY date_month ASC, date_day ASC`);
@@ -39,14 +38,12 @@ app.get('/api/occasions', async (req, res) => {
   }
 });
 
-// Add new occasion
 app.post('/api/occasions', async (req, res) => {
   try {
     const { recipient_name, recipient_phone, recipient_email, occasion_type, date_month, date_day, year, custom_message, send_time } = req.body;
 
-    // Security & Input Validation
     if (!recipient_name || (!recipient_phone && !recipient_email) || !occasion_type || !date_month || !date_day || !custom_message) {
-      return res.status(400).json({ error: 'Missing required fields (Name, Phone/Email, Occasion, Month, Day, Message)' });
+      return res.status(400).json({ error: 'Missing required fields (Name, Phone, Occasion, Month, Day, Message)' });
     }
 
     const monthInt = parseInt(date_month, 10);
@@ -81,7 +78,6 @@ app.post('/api/occasions', async (req, res) => {
   }
 });
 
-// Update an existing occasion
 app.put('/api/occasions/:id', async (req, res) => {
   try {
     const { id } = req.params;
@@ -116,7 +112,6 @@ app.put('/api/occasions/:id', async (req, res) => {
   }
 });
 
-// Delete an occasion
 app.delete('/api/occasions/:id', async (req, res) => {
   try {
     const { id } = req.params;
@@ -134,7 +129,6 @@ app.delete('/api/occasions/:id', async (req, res) => {
 // API ROUTES: MANUAL TRIGGER & TEST DISPATCH
 // -------------------------------------------------------------
 
-// Manually trigger today's SMS auto-dispatcher
 app.post('/api/trigger-dispatch', async (req, res) => {
   try {
     const result = await triggerDailyAutoDispatch();
@@ -144,7 +138,6 @@ app.post('/api/trigger-dispatch', async (req, res) => {
   }
 });
 
-// Send a test SMS for a specific occasion immediately
 app.post('/api/send-now/:id', async (req, res) => {
   try {
     const { id } = req.params;
@@ -165,12 +158,17 @@ app.post('/api/send-now/:id', async (req, res) => {
 
     await dbQuery.run(
       `INSERT INTO logs (occasion_id, recipient_name, recipient_email, occasion_type, status, details)
-       VALUES (?, ?, ?, ?, 'SUCCESS', ?)`,
-      [occasion.id, occasion.recipient_name, toPhone, occasion.occasion_type, sendResult.details]
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [occasion.id, occasion.recipient_name, toPhone, occasion.occasion_type, sendResult.status, sendResult.details]
     );
 
-    res.json({ message: `SMS Text Message sent directly to ${toPhone}!`, details: sendResult });
+    res.json({ message: `SMS Text Message attempt finished for ${toPhone}!`, details: sendResult });
   } catch (err) {
+    await dbQuery.run(
+      `INSERT INTO logs (occasion_id, recipient_name, recipient_email, occasion_type, status, details)
+       VALUES (?, ?, ?, ?, 'FAILED', ?)`,
+      [id, 'Recipient', 'Unknown', 'SMS', err.message]
+    );
     res.status(500).json({ error: 'Failed to send SMS', details: err.message });
   }
 });
@@ -179,7 +177,6 @@ app.post('/api/send-now/:id', async (req, res) => {
 // API ROUTES: LOGS & SETTINGS
 // -------------------------------------------------------------
 
-// Get sent message logs
 app.get('/api/logs', async (req, res) => {
   try {
     const logs = await dbQuery.all(`SELECT * FROM logs ORDER BY sent_at DESC LIMIT 100`);
@@ -189,7 +186,6 @@ app.get('/api/logs', async (req, res) => {
   }
 });
 
-// Get Settings (obscuring sensitive tokens)
 app.get('/api/settings', async (req, res) => {
   try {
     const settings = await dbQuery.all(`SELECT key, value FROM settings`);
@@ -203,15 +199,20 @@ app.get('/api/settings', async (req, res) => {
   }
 });
 
-// Save Settings
 app.post('/api/settings', async (req, res) => {
   try {
     const settings = req.body;
     for (const [key, value] of Object.entries(settings)) {
-      if (value === '••••••••') continue; // Don't overwrite with masked string
+      if (value === '••••••••') continue;
       await dbQuery.run(
         `INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
         [key, value]
+      );
+    }
+    // Auto-set sms_provider if twilio credentials are sent
+    if (settings.twilio_account_sid && settings.twilio_auth_token) {
+      await dbQuery.run(
+        `INSERT INTO settings (key, value) VALUES ('sms_provider', 'twilio') ON CONFLICT(key) DO UPDATE SET value = 'twilio'`
       );
     }
     res.json({ message: 'SMS settings saved successfully' });
@@ -220,11 +221,9 @@ app.post('/api/settings', async (req, res) => {
   }
 });
 
-// Start Express Server & Background Scheduler
 app.listen(PORT, () => {
   console.log(`====================================================`);
-  console.log(`📱 Occasion SMS Auto-Sender Web App running!`);
-  console.log(`🌐 Local URL: http://localhost:${PORT}`);
+  console.log(`📱 Occasion SMS Auto-Sender Web App running on port ${PORT}!`);
   console.log(`====================================================`);
   startScheduler();
 });
