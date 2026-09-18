@@ -193,7 +193,7 @@ function renderDashboardTable() {
           ${monthStr} ${occ.date_day} ${isToday ? '<span class="ml-1 text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-bold">Today!</span>' : ''}
         </td>
         <td class="px-6 py-4 text-right space-x-2">
-          <button onclick="handleSendNow(${occ.id})" title="Send Direct Message Now" class="text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-700 px-3 py-1.5 rounded-lg transition font-medium">
+          <button onclick="handleSendNow(${occ.id})" title="Send Direct Background Message Now" class="text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-700 px-3 py-1.5 rounded-lg transition font-medium">
             <i class="fa-solid fa-paper-plane mr-1"></i> Send Now
           </button>
           <button onclick="openOccasionModal(${occ.id})" class="text-slate-400 hover:text-slate-600 px-2 py-1">
@@ -397,20 +397,15 @@ async function handleDeleteOccasion(id) {
   }
 }
 
+// 100% Background Automated Send - NEVER opens external WhatsApp app
 async function handleSendNow(id) {
-  showAlert('Sending background message directly to recipient...', 'info');
+  showAlert('Sending automated background message directly to recipient...', 'info');
   try {
     const res = await fetch(`/api/send-now/${id}`, { method: 'POST' });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || (data.details ? data.details : 'Failed to send message'));
 
-    if (data.details && data.details.whatsappUrl) {
-      window.open(data.details.whatsappUrl, '_blank');
-      showAlert('WhatsApp Direct Message link opened!', 'success');
-    } else {
-      showAlert(data.message || 'Message sent successfully in background!', 'success');
-    }
-
+    showAlert(data.message || 'Message delivered 100% automatically in the background!', 'success');
     await fetchLogs();
     updateDashboardStats();
     renderLogsTable();
