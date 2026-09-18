@@ -15,6 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('triggerDispatcherBtn').addEventListener('click', handleTriggerAutoDispatch);
   document.getElementById('searchInput').addEventListener('input', renderOccasionsGrid);
   document.getElementById('filterType').addEventListener('change', renderOccasionsGrid);
+  document.getElementById('setting_sms_provider').addEventListener('change', toggleProviderSections);
 });
 
 async function initApp() {
@@ -29,9 +30,6 @@ async function initApp() {
   renderLogsTable();
 }
 
-// -------------------------------------------------------------
-// TAB NAVIGATION
-// -------------------------------------------------------------
 function switchTab(tabId) {
   state.activeTab = tabId;
 
@@ -49,9 +47,6 @@ function switchTab(tabId) {
   });
 }
 
-// -------------------------------------------------------------
-// ALERT / NOTIFICATION BANNER
-// -------------------------------------------------------------
 function showAlert(message, type = 'success') {
   const banner = document.getElementById('alertBanner');
   const content = document.getElementById('alertContent');
@@ -97,9 +92,6 @@ function escapeHtml(str) {
     .replace(/'/g, '&#039;');
 }
 
-// -------------------------------------------------------------
-// API FETCHERS
-// -------------------------------------------------------------
 async function fetchOccasions() {
   try {
     const res = await fetch('/api/occasions');
@@ -123,6 +115,15 @@ async function fetchSettings() {
     const res = await fetch('/api/settings');
     state.settings = await res.json();
 
+    const providerSelect = document.getElementById('setting_sms_provider');
+    if (providerSelect) {
+      providerSelect.value = state.settings.sms_provider || 'email_to_sms';
+      toggleProviderSections();
+    }
+
+    if (document.getElementById('setting_fast2sms_api_key')) {
+      document.getElementById('setting_fast2sms_api_key').value = state.settings.fast2sms_api_key || '';
+    }
     if (document.getElementById('setting_twilio_account_sid')) {
       document.getElementById('setting_twilio_account_sid').value = state.settings.twilio_account_sid || '';
       document.getElementById('setting_twilio_auth_token').value = state.settings.twilio_auth_token || '';
@@ -133,9 +134,13 @@ async function fetchSettings() {
   }
 }
 
-// -------------------------------------------------------------
-// DASHBOARD STATS & TABLES
-// -------------------------------------------------------------
+function toggleProviderSections() {
+  const provider = document.getElementById('setting_sms_provider').value;
+  document.getElementById('section_email_to_sms').classList.toggle('hidden', provider !== 'email_to_sms');
+  document.getElementById('section_fast2sms').classList.toggle('hidden', provider !== 'fast2sms');
+  document.getElementById('section_twilio').classList.toggle('hidden', provider !== 'twilio');
+}
+
 function updateDashboardStats() {
   const total = state.occasions.length;
   const currentMonth = new Date().getMonth() + 1;
@@ -189,7 +194,7 @@ function renderDashboardTable() {
           ${monthStr} ${occ.date_day} ${isToday ? '<span class="ml-1 text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-bold">Today!</span>' : ''}
         </td>
         <td class="px-6 py-4 text-right space-x-2">
-          <button onclick="handleSendNow(${occ.id})" title="Send Direct SMS Test Now" class="text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-700 px-3 py-1.5 rounded-lg transition font-medium">
+          <button onclick="handleSendNow(${occ.id})" title="Send Direct Free SMS Now" class="text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-700 px-3 py-1.5 rounded-lg transition font-medium">
             <i class="fa-solid fa-paper-plane mr-1"></i> Send SMS Now
           </button>
           <button onclick="openOccasionModal(${occ.id})" class="text-slate-400 hover:text-slate-600 px-2 py-1">
@@ -206,9 +211,6 @@ function isOccasionToday(m, d) {
   return (now.getMonth() + 1) === m && now.getDate() === d;
 }
 
-// -------------------------------------------------------------
-// OCCASIONS GRID
-// -------------------------------------------------------------
 function renderOccasionsGrid() {
   const grid = document.getElementById('occasionsGrid');
   const search = document.getElementById('searchInput').value.toLowerCase().trim();
@@ -274,9 +276,6 @@ function renderOccasionsGrid() {
   }).join('');
 }
 
-// -------------------------------------------------------------
-// SENT LOGS TABLE
-// -------------------------------------------------------------
 function renderLogsTable() {
   const tbody = document.getElementById('logsTableBody');
   if (state.logs.length === 0) {
@@ -318,9 +317,6 @@ function renderLogsTable() {
   }).join('');
 }
 
-// -------------------------------------------------------------
-// MODAL & HANDLERS
-// -------------------------------------------------------------
 function openOccasionModal(id = null) {
   const modal = document.getElementById('occasionModal');
   const form = document.getElementById('occasionForm');
@@ -339,7 +335,7 @@ function openOccasionModal(id = null) {
       document.getElementById('custom_message').value = occ.custom_message;
     }
   } else {
-    document.getElementById('modalTitle').textContent = 'Add SMS Occasion';
+    document.getElementById('modalTitle').textContent = 'Add Free SMS Occasion';
     document.getElementById('occasion_id').value = '';
     document.getElementById('custom_message').value = 'Wishing you the happiest {occasion}, {name}! May your day be filled with endless joy!';
   }
@@ -354,10 +350,13 @@ function closeOccasionModal() {
 async function handleSaveOccasion(e) {
   e.preventDefault();
   const id = document.getElementById('occasion_id').value;
+  const phone = document.getElementById('recipient_phone').value;
+  const gateway = document.getElementById('carrier_gateway').value;
 
   const payload = {
     recipient_name: document.getElementById('recipient_name').value,
-    recipient_phone: document.getElementById('recipient_phone').value,
+    recipient_phone: gateway !== 'DIRECT' && !phone.includes('@') ? `${phone}${gateway}` : phone,
+    recipient_email: gateway !== 'DIRECT' && !phone.includes('@') ? `${phone}${gateway}` : phone,
     occasion_type: document.getElementById('occasion_type').value,
     date_month: document.getElementById('date_month').value,
     date_day: document.getElementById('date_day').value,
@@ -378,7 +377,7 @@ async function handleSaveOccasion(e) {
     if (!res.ok) throw new Error(data.error || 'Failed to save');
 
     closeOccasionModal();
-    showAlert(id ? 'SMS contact updated!' : 'New SMS contact scheduled!', 'success');
+    showAlert(id ? 'Free SMS contact updated!' : 'New Free SMS contact scheduled!', 'success');
     await initApp();
   } catch (err) {
     showAlert(err.message, 'error');
@@ -436,9 +435,11 @@ async function handleTriggerAutoDispatch() {
 async function handleSaveSettings(e) {
   e.preventDefault();
   const payload = {
-    twilio_account_sid: document.getElementById('setting_twilio_account_sid').value,
-    twilio_auth_token: document.getElementById('setting_twilio_auth_token').value,
-    twilio_phone_number: document.getElementById('setting_twilio_phone_number').value
+    sms_provider: document.getElementById('setting_sms_provider').value,
+    fast2sms_api_key: document.getElementById('setting_fast2sms_api_key')?.value || '',
+    twilio_account_sid: document.getElementById('setting_twilio_account_sid')?.value || '',
+    twilio_auth_token: document.getElementById('setting_twilio_auth_token')?.value || '',
+    twilio_phone_number: document.getElementById('setting_twilio_phone_number')?.value || ''
   };
 
   try {
@@ -450,7 +451,7 @@ async function handleSaveSettings(e) {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Failed to save settings');
 
-    showAlert('SMS gateway settings saved successfully!', 'success');
+    showAlert('SMS provider settings saved successfully!', 'success');
     await fetchSettings();
   } catch (err) {
     showAlert(err.message, 'error');
