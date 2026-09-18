@@ -3,7 +3,7 @@ const cors = require('cors');
 const path = require('path');
 const { dbQuery } = require('./database');
 const { startScheduler, triggerDailyAutoDispatch } = require('./scheduler');
-const { sendOccasionEmail, getTransporter } = require('./mailer');
+const { sendOccasionSMS } = require('./sms');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -42,11 +42,11 @@ app.get('/api/occasions', async (req, res) => {
 // Add new occasion
 app.post('/api/occasions', async (req, res) => {
   try {
-    const { recipient_name, recipient_email, recipient_phone, occasion_type, date_month, date_day, year, custom_message, send_time } = req.body;
+    const { recipient_name, recipient_phone, recipient_email, occasion_type, date_month, date_day, year, custom_message, send_time } = req.body;
 
     // Security & Input Validation
-    if (!recipient_name || !recipient_email || !occasion_type || !date_month || !date_day || !custom_message) {
-      return res.status(400).json({ error: 'Missing required fields' });
+    if (!recipient_name || (!recipient_phone && !recipient_email) || !occasion_type || !date_month || !date_day || !custom_message) {
+      return res.status(400).json({ error: 'Missing required fields (Name, Phone/Email, Occasion, Month, Day, Message)' });
     }
 
     const monthInt = parseInt(date_month, 10);
@@ -59,19 +59,13 @@ app.post('/api/occasions', async (req, res) => {
       return res.status(400).json({ error: 'Invalid day (must be 1-31)' });
     }
 
-    // Email regex validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(recipient_email)) {
-      return res.status(400).json({ error: 'Invalid email address format' });
-    }
-
     const result = await dbQuery.run(
       `INSERT INTO occasions (recipient_name, recipient_email, recipient_phone, occasion_type, date_month, date_day, year, custom_message, send_time)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         recipient_name.trim(),
-        recipient_email.trim(),
-        recipient_phone ? recipient_phone.trim() : null,
+        recipient_email ? recipient_email.trim() : recipient_phone.trim(),
+        recipient_phone ? recipient_phone.trim() : recipient_email.trim(),
         occasion_type.trim(),
         monthInt,
         dayInt,
@@ -81,7 +75,7 @@ app.post('/api/occasions', async (req, res) => {
       ]
     );
 
-    res.status(201).json({ message: 'Occasion added successfully', id: result.id });
+    res.status(201).json({ message: 'SMS Occasion added successfully', id: result.id });
   } catch (err) {
     res.status(500).json({ error: 'Failed to create occasion', details: err.message });
   }
@@ -100,8 +94,8 @@ app.put('/api/occasions/:id', async (req, res) => {
        WHERE id = ?`,
       [
         recipient_name,
-        recipient_email,
-        recipient_phone,
+        recipient_email || recipient_phone,
+        recipient_phone || recipient_email,
         occasion_type,
         parseInt(date_month, 10),
         parseInt(date_day, 10),
@@ -140,17 +134,17 @@ app.delete('/api/occasions/:id', async (req, res) => {
 // API ROUTES: MANUAL TRIGGER & TEST DISPATCH
 // -------------------------------------------------------------
 
-// Manually trigger today's auto-dispatcher
+// Manually trigger today's SMS auto-dispatcher
 app.post('/api/trigger-dispatch', async (req, res) => {
   try {
     const result = await triggerDailyAutoDispatch();
-    res.json({ message: 'Auto-dispatcher executed successfully', summary: result });
+    res.json({ message: 'SMS Auto-dispatcher executed successfully', summary: result });
   } catch (err) {
     res.status(500).json({ error: 'Failed to run auto-dispatcher', details: err.message });
   }
 });
 
-// Send a test email for a specific occasion immediately
+// Send a test SMS for a specific occasion immediately
 app.post('/api/send-now/:id', async (req, res) => {
   try {
     const { id } = req.params;
@@ -160,26 +154,24 @@ app.post('/api/send-now/:id', async (req, res) => {
       return res.status(404).json({ error: 'Occasion not found' });
     }
 
-    const sendResult = await sendOccasionEmail({
-      to: occasion.recipient_email,
+    const toPhone = occasion.recipient_phone || occasion.recipient_email;
+
+    const sendResult = await sendOccasionSMS({
+      toPhone: toPhone,
       recipientName: occasion.recipient_name,
       occasionType: occasion.occasion_type,
       customMessage: occasion.custom_message
     });
 
-    const detailMsg = sendResult.previewUrl 
-      ? `Sent via Test Account. Preview: ${sendResult.previewUrl}`
-      : `Message ID: ${sendResult.messageId}`;
-
     await dbQuery.run(
       `INSERT INTO logs (occasion_id, recipient_name, recipient_email, occasion_type, status, details)
        VALUES (?, ?, ?, ?, 'SUCCESS', ?)`,
-      [occasion.id, occasion.recipient_name, occasion.recipient_email, occasion.occasion_type, detailMsg]
+      [occasion.id, occasion.recipient_name, toPhone, occasion.occasion_type, sendResult.details]
     );
 
-    res.json({ message: `Message sent directly to ${occasion.recipient_email}!`, details: sendResult });
+    res.json({ message: `SMS Text Message sent directly to ${toPhone}!`, details: sendResult });
   } catch (err) {
-    res.status(500).json({ error: 'Failed to send message', details: err.message });
+    res.status(500).json({ error: 'Failed to send SMS', details: err.message });
   }
 });
 
@@ -197,13 +189,13 @@ app.get('/api/logs', async (req, res) => {
   }
 });
 
-// Get Settings (obscuring pass)
+// Get Settings (obscuring sensitive tokens)
 app.get('/api/settings', async (req, res) => {
   try {
     const settings = await dbQuery.all(`SELECT key, value FROM settings`);
     const settingsObj = {};
     settings.forEach(row => {
-      settingsObj[row.key] = row.key === 'smtp_pass' ? '••••••••' : row.value;
+      settingsObj[row.key] = row.key.includes('token') || row.key.includes('pass') ? '••••••••' : row.value;
     });
     res.json(settingsObj);
   } catch (err) {
@@ -216,38 +208,22 @@ app.post('/api/settings', async (req, res) => {
   try {
     const settings = req.body;
     for (const [key, value] of Object.entries(settings)) {
-      if (key === 'smtp_pass' && value === '••••••••') continue; // Don't overwrite with masked string
+      if (value === '••••••••') continue; // Don't overwrite with masked string
       await dbQuery.run(
         `INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
         [key, value]
       );
     }
-    res.json({ message: 'Settings saved successfully' });
+    res.json({ message: 'SMS settings saved successfully' });
   } catch (err) {
     res.status(500).json({ error: 'Failed to save settings', details: err.message });
-  }
-});
-
-// Test SMTP connection
-app.post('/api/test-smtp', async (req, res) => {
-  try {
-    const { transporter, isEthereal } = await getTransporter();
-    await transporter.verify();
-    res.json({ 
-      status: 'SUCCESS', 
-      message: isEthereal 
-        ? 'Using free Ethereal test account (No SMTP required!)' 
-        : 'Custom SMTP connection verified successfully!'
-    });
-  } catch (err) {
-    res.status(400).json({ status: 'FAILED', message: `SMTP verification failed: ${err.message}` });
   }
 });
 
 // Start Express Server & Background Scheduler
 app.listen(PORT, () => {
   console.log(`====================================================`);
-  console.log(`🎉 Occasion Auto-Sender Web App running!`);
+  console.log(`📱 Occasion SMS Auto-Sender Web App running!`);
   console.log(`🌐 Local URL: http://localhost:${PORT}`);
   console.log(`====================================================`);
   startScheduler();

@@ -12,7 +12,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('occasionForm').addEventListener('submit', handleSaveOccasion);
   document.getElementById('settingsForm').addEventListener('submit', handleSaveSettings);
-  document.getElementById('testSmtpBtn').addEventListener('click', handleTestSmtp);
   document.getElementById('triggerDispatcherBtn').addEventListener('click', handleTriggerAutoDispatch);
   document.getElementById('searchInput').addEventListener('input', renderOccasionsGrid);
   document.getElementById('filterType').addEventListener('change', renderOccasionsGrid);
@@ -45,7 +44,7 @@ function switchTab(tabId) {
       tabBtn.className = 'py-4 px-2 active-tab transition flex items-center space-x-2';
     } else {
       viewEl.classList.add('hidden');
-      tabBtn.className = 'py-4 px-2 text-slate-600 hover:text-indigo-600 transition flex items-center space-x-2';
+      tabBtn.className = 'py-4 px-2 text-slate-600 hover:text-emerald-600 transition flex items-center space-x-2';
     }
   });
 }
@@ -60,13 +59,13 @@ function showAlert(message, type = 'success') {
   const styles = {
     success: 'bg-emerald-50 text-emerald-800 border border-emerald-200',
     error: 'bg-rose-50 text-rose-800 border border-rose-200',
-    info: 'bg-indigo-50 text-indigo-800 border border-indigo-200'
+    info: 'bg-teal-50 text-teal-800 border border-teal-200'
   };
 
   const icons = {
     success: '<i class="fa-solid fa-circle-check text-emerald-600 text-lg"></i>',
     error: '<i class="fa-solid fa-circle-xmark text-rose-600 text-lg"></i>',
-    info: '<i class="fa-solid fa-circle-info text-indigo-600 text-lg"></i>'
+    info: '<i class="fa-solid fa-circle-info text-teal-600 text-lg"></i>'
   };
 
   content.className = `p-4 rounded-xl text-sm flex justify-between items-center shadow-sm ${styles[type] || styles.info}`;
@@ -88,7 +87,6 @@ function showAlert(message, type = 'success') {
   }, 6000);
 }
 
-// Helper to sanitize text rendering
 function escapeHtml(str) {
   if (!str) return '';
   return String(str)
@@ -125,11 +123,11 @@ async function fetchSettings() {
     const res = await fetch('/api/settings');
     state.settings = await res.json();
 
-    document.getElementById('setting_sender_name').value = state.settings.sender_name || '';
-    document.getElementById('setting_smtp_host').value = state.settings.smtp_host || '';
-    document.getElementById('setting_smtp_port').value = state.settings.smtp_port || '';
-    document.getElementById('setting_smtp_user').value = state.settings.smtp_user || '';
-    document.getElementById('setting_smtp_pass').value = state.settings.smtp_pass || '';
+    if (document.getElementById('setting_twilio_account_sid')) {
+      document.getElementById('setting_twilio_account_sid').value = state.settings.twilio_account_sid || '';
+      document.getElementById('setting_twilio_auth_token').value = state.settings.twilio_auth_token || '';
+      document.getElementById('setting_twilio_phone_number').value = state.settings.twilio_phone_number || '';
+    }
   } catch (err) {
     console.error('Error fetching settings:', err);
   }
@@ -156,8 +154,8 @@ function renderDashboardTable() {
     tbody.innerHTML = `
       <tr>
         <td colspan="5" class="px-6 py-12 text-center text-slate-400">
-          <i class="fa-solid fa-calendar-xmark text-3xl mb-2 block"></i>
-          No scheduled occasions found. Click "Add New Occasion" to get started!
+          <i class="fa-solid fa-mobile-screen text-3xl mb-2 block text-slate-300"></i>
+          No scheduled SMS contacts found. Click "Add New SMS Contact" to get started!
         </td>
       </tr>
     `;
@@ -172,33 +170,27 @@ function renderDashboardTable() {
   tbody.innerHTML = sorted.map(occ => {
     const monthStr = monthNames[occ.date_month - 1];
     const isToday = isOccasionToday(occ.date_month, occ.date_day);
-
-    const badgeColor = isToday 
-      ? 'bg-amber-100 text-amber-800 font-bold border border-amber-300' 
-      : 'bg-slate-100 text-slate-700';
+    const phone = occ.recipient_phone || occ.recipient_email;
 
     return `
       <tr class="hover:bg-slate-50 transition">
         <td class="px-6 py-4 font-medium text-slate-900">
           <div>${escapeHtml(occ.recipient_name)}</div>
-          <div class="text-xs text-slate-400">${escapeHtml(occ.recipient_email)}</div>
+        </td>
+        <td class="px-6 py-4 text-xs font-mono text-emerald-700">
+          <i class="fa-solid fa-phone text-[10px] mr-1"></i>${escapeHtml(phone)}
         </td>
         <td class="px-6 py-4">
-          <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700">
+          <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700">
             ${occ.occasion_type === 'Birthday' ? '🎂 Birthday' : (occ.occasion_type === 'Anniversary' ? '❤️ Anniversary' : '🎉 Custom')}
           </span>
         </td>
         <td class="px-6 py-4 font-medium text-slate-700">
-          ${monthStr} ${occ.date_day} ${occ.year ? `(${occ.year})` : ''}
-        </td>
-        <td class="px-6 py-4">
-          <span class="px-2.5 py-1 rounded-full text-xs ${badgeColor}">
-            ${isToday ? '🔥 Today!' : 'Scheduled'}
-          </span>
+          ${monthStr} ${occ.date_day} ${isToday ? '<span class="ml-1 text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-bold">Today!</span>' : ''}
         </td>
         <td class="px-6 py-4 text-right space-x-2">
-          <button onclick="handleSendNow(${occ.id})" title="Send Direct Test Message Now" class="text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-600 px-3 py-1.5 rounded-lg transition font-medium">
-            <i class="fa-solid fa-paper-plane mr-1"></i> Send Now
+          <button onclick="handleSendNow(${occ.id})" title="Send Direct SMS Test Now" class="text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-700 px-3 py-1.5 rounded-lg transition font-medium">
+            <i class="fa-solid fa-paper-plane mr-1"></i> Send SMS Now
           </button>
           <button onclick="openOccasionModal(${occ.id})" class="text-slate-400 hover:text-slate-600 px-2 py-1">
             <i class="fa-solid fa-pen"></i>
@@ -223,7 +215,8 @@ function renderOccasionsGrid() {
   const filter = document.getElementById('filterType').value;
 
   const filtered = state.occasions.filter(o => {
-    const matchesSearch = o.recipient_name.toLowerCase().includes(search) || o.recipient_email.toLowerCase().includes(search);
+    const phone = (o.recipient_phone || o.recipient_email).toLowerCase();
+    const matchesSearch = o.recipient_name.toLowerCase().includes(search) || phone.includes(search);
     const matchesFilter = filter === 'ALL' || o.occasion_type === filter;
     return matchesSearch && matchesFilter;
   });
@@ -231,8 +224,8 @@ function renderOccasionsGrid() {
   if (filtered.length === 0) {
     grid.innerHTML = `
       <div class="col-span-full py-16 text-center text-slate-400 bg-white rounded-2xl border border-slate-200">
-        <i class="fa-solid fa-folder-open text-4xl mb-3 block text-slate-300"></i>
-        No occasions match your criteria.
+        <i class="fa-solid fa-comment-slash text-4xl mb-3 block text-slate-300"></i>
+        No SMS contacts match your search.
       </div>
     `;
     return;
@@ -240,34 +233,35 @@ function renderOccasionsGrid() {
 
   grid.innerHTML = filtered.map(occ => {
     const monthStr = monthNames[occ.date_month - 1];
+    const phone = occ.recipient_phone || occ.recipient_email;
+
     return `
       <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm hover:shadow-md transition flex flex-col justify-between space-y-4">
         <div class="space-y-3">
           <div class="flex justify-between items-start">
-            <span class="px-3 py-1 rounded-full text-xs font-bold ${occ.occasion_type === 'Birthday' ? 'bg-pink-50 text-pink-700' : 'bg-purple-50 text-purple-700'}">
+            <span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700">
               ${occ.occasion_type}
             </span>
             <div class="text-right">
               <span class="text-sm font-bold text-slate-900">${monthStr} ${occ.date_day}</span>
-              ${occ.year ? `<span class="text-xs text-slate-400 block">${occ.year}</span>` : ''}
             </div>
           </div>
           <div>
             <h4 class="text-base font-bold text-slate-900">${escapeHtml(occ.recipient_name)}</h4>
-            <p class="text-xs text-slate-500">${escapeHtml(occ.recipient_email)}</p>
+            <p class="text-xs font-mono text-emerald-600 font-semibold"><i class="fa-solid fa-phone mr-1 text-[10px]"></i>${escapeHtml(phone)}</p>
           </div>
-          <div class="bg-slate-50 p-3 rounded-xl border border-slate-100 text-xs text-slate-600 line-clamp-3 italic">
+          <div class="bg-slate-50 p-3 rounded-xl border border-slate-100 text-xs text-slate-600 italic">
             "${escapeHtml(occ.custom_message)}"
           </div>
         </div>
 
         <div class="pt-3 border-t border-slate-100 flex items-center justify-between">
-          <button onclick="handleSendNow(${occ.id})" class="text-xs bg-indigo-600 hover:bg-indigo-700 text-white px-3.5 py-2 rounded-xl transition font-medium flex items-center space-x-1.5 shadow-sm">
+          <button onclick="handleSendNow(${occ.id})" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 rounded-xl transition font-medium flex items-center space-x-1.5 shadow-sm">
             <i class="fa-solid fa-paper-plane text-[10px]"></i>
-            <span>Send Test Now</span>
+            <span>Send SMS Now</span>
           </button>
           <div class="space-x-1">
-            <button onclick="openOccasionModal(${occ.id})" class="p-2 text-slate-400 hover:text-indigo-600 rounded-lg hover:bg-slate-50 transition">
+            <button onclick="openOccasionModal(${occ.id})" class="p-2 text-slate-400 hover:text-emerald-600 rounded-lg hover:bg-slate-50 transition">
               <i class="fa-solid fa-pen"></i>
             </button>
             <button onclick="handleDeleteOccasion(${occ.id})" class="p-2 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-slate-50 transition">
@@ -289,7 +283,7 @@ function renderLogsTable() {
     tbody.innerHTML = `
       <tr>
         <td colspan="5" class="px-6 py-12 text-center text-slate-400">
-          No messages have been sent yet.
+          No SMS text messages have been sent yet.
         </td>
       </tr>
     `;
@@ -307,10 +301,9 @@ function renderLogsTable() {
         </td>
         <td class="px-6 py-4 font-medium text-slate-900">
           <div>${escapeHtml(log.recipient_name)}</div>
-          <div class="text-xs text-slate-400">${escapeHtml(log.recipient_email)}</div>
         </td>
-        <td class="px-6 py-4 text-xs text-slate-600">
-          ${escapeHtml(log.occasion_type)}
+        <td class="px-6 py-4 text-xs font-mono text-emerald-700">
+          ${escapeHtml(log.recipient_email)}
         </td>
         <td class="px-6 py-4">
           <span class="px-2.5 py-1 rounded-full text-xs font-semibold ${statusClass}">
@@ -336,20 +329,19 @@ function openOccasionModal(id = null) {
   if (id) {
     const occ = state.occasions.find(o => o.id === id);
     if (occ) {
-      document.getElementById('modalTitle').textContent = 'Edit Scheduled Occasion';
+      document.getElementById('modalTitle').textContent = 'Edit SMS Occasion';
       document.getElementById('occasion_id').value = occ.id;
       document.getElementById('recipient_name').value = occ.recipient_name;
-      document.getElementById('recipient_email').value = occ.recipient_email;
-      document.getElementById('recipient_phone').value = occ.recipient_phone || '';
+      document.getElementById('recipient_phone').value = occ.recipient_phone || occ.recipient_email;
       document.getElementById('occasion_type').value = occ.occasion_type;
       document.getElementById('date_month').value = occ.date_month;
       document.getElementById('date_day').value = occ.date_day;
       document.getElementById('custom_message').value = occ.custom_message;
     }
   } else {
-    document.getElementById('modalTitle').textContent = 'Add Scheduled Occasion';
+    document.getElementById('modalTitle').textContent = 'Add SMS Occasion';
     document.getElementById('occasion_id').value = '';
-    document.getElementById('custom_message').value = 'Wishing you the happiest {occasion}, {name}! May your day be filled with endless joy and wonderful moments!';
+    document.getElementById('custom_message').value = 'Wishing you the happiest {occasion}, {name}! May your day be filled with endless joy!';
   }
 
   modal.classList.remove('hidden');
@@ -365,7 +357,6 @@ async function handleSaveOccasion(e) {
 
   const payload = {
     recipient_name: document.getElementById('recipient_name').value,
-    recipient_email: document.getElementById('recipient_email').value,
     recipient_phone: document.getElementById('recipient_phone').value,
     occasion_type: document.getElementById('occasion_type').value,
     date_month: document.getElementById('date_month').value,
@@ -387,7 +378,7 @@ async function handleSaveOccasion(e) {
     if (!res.ok) throw new Error(data.error || 'Failed to save');
 
     closeOccasionModal();
-    showAlert(id ? 'Occasion updated successfully!' : 'New occasion added to schedule!', 'success');
+    showAlert(id ? 'SMS contact updated!' : 'New SMS contact scheduled!', 'success');
     await initApp();
   } catch (err) {
     showAlert(err.message, 'error');
@@ -395,14 +386,14 @@ async function handleSaveOccasion(e) {
 }
 
 async function handleDeleteOccasion(id) {
-  if (!confirm('Are you sure you want to delete this scheduled occasion?')) return;
+  if (!confirm('Are you sure you want to delete this scheduled SMS?')) return;
 
   try {
     const res = await fetch(`/api/occasions/${id}`, { method: 'DELETE' });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Failed to delete');
 
-    showAlert('Occasion deleted', 'info');
+    showAlert('SMS contact deleted', 'info');
     await initApp();
   } catch (err) {
     showAlert(err.message, 'error');
@@ -410,11 +401,11 @@ async function handleDeleteOccasion(id) {
 }
 
 async function handleSendNow(id) {
-  showAlert('Sending message directly to recipient...', 'info');
+  showAlert('Sending SMS text message directly to mobile phone...', 'info');
   try {
     const res = await fetch(`/api/send-now/${id}`, { method: 'POST' });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Failed to send');
+    if (!res.ok) throw new Error(data.error || 'Failed to send SMS');
 
     showAlert(data.message, 'success');
     await fetchLogs();
@@ -426,14 +417,14 @@ async function handleSendNow(id) {
 }
 
 async function handleTriggerAutoDispatch() {
-  showAlert('Running automated background dispatcher check...', 'info');
+  showAlert('Running automated background SMS dispatcher check...', 'info');
   try {
     const res = await fetch('/api/trigger-dispatch', { method: 'POST' });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Failed auto-dispatcher');
 
     const summary = data.summary;
-    showAlert(`Auto-dispatcher complete! Matched: ${summary.totalMatched}, Sent: ${summary.sentCount}, Skipped: ${summary.skippedCount}, Failed: ${summary.failedCount}`, 'success');
+    showAlert(`SMS Dispatcher complete! Matched: ${summary.totalMatched}, Sent: ${summary.sentCount}, Skipped: ${summary.skippedCount}`, 'success');
     await fetchLogs();
     updateDashboardStats();
     renderLogsTable();
@@ -445,11 +436,9 @@ async function handleTriggerAutoDispatch() {
 async function handleSaveSettings(e) {
   e.preventDefault();
   const payload = {
-    sender_name: document.getElementById('setting_sender_name').value,
-    smtp_host: document.getElementById('setting_smtp_host').value,
-    smtp_port: document.getElementById('setting_smtp_port').value,
-    smtp_user: document.getElementById('setting_smtp_user').value,
-    smtp_pass: document.getElementById('setting_smtp_pass').value
+    twilio_account_sid: document.getElementById('setting_twilio_account_sid').value,
+    twilio_auth_token: document.getElementById('setting_twilio_auth_token').value,
+    twilio_phone_number: document.getElementById('setting_twilio_phone_number').value
   };
 
   try {
@@ -461,21 +450,8 @@ async function handleSaveSettings(e) {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Failed to save settings');
 
-    showAlert('Email settings saved successfully!', 'success');
+    showAlert('SMS gateway settings saved successfully!', 'success');
     await fetchSettings();
-  } catch (err) {
-    showAlert(err.message, 'error');
-  }
-}
-
-async function handleTestSmtp() {
-  showAlert('Testing SMTP connection...', 'info');
-  try {
-    const res = await fetch('/api/test-smtp', { method: 'POST' });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || 'SMTP test failed');
-
-    showAlert(data.message, 'success');
   } catch (err) {
     showAlert(err.message, 'error');
   }

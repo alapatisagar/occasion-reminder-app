@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Occasion Auto-Sender | Birthday & Anniversary Automator</title>
+  <title>Occasion SMS Auto-Sender | Automatic Text Messages</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
     .active-tab {
-      border-bottom: 3px solid #6366f1;
-      color: #4f46e5;
+      border-bottom: 3px solid #10b981;
+      color: #059669;
       font-weight: 600;
     }
   </style>
@@ -17,20 +17,20 @@
 <body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col font-sans">
 
   <!-- Header -->
-  <header class="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white shadow-lg">
+  <header class="bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 text-white shadow-lg">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex flex-col sm:flex-row justify-between items-center gap-4">
       <div class="flex items-center space-x-3">
         <div class="p-3 bg-white/10 rounded-2xl backdrop-blur-md">
-          <i class="fa-solid fa-gift text-2xl text-yellow-300"></i>
+          <i class="fa-solid fa-comment-sms text-2xl text-yellow-300"></i>
         </div>
         <div>
-          <h1 class="text-2xl font-bold tracking-tight">Occasion Auto-Sender</h1>
-          <p class="text-xs text-indigo-100 font-medium">Automatically send birthday & anniversary messages directly to loved ones</p>
+          <h1 class="text-2xl font-bold tracking-tight">Occasion SMS Auto-Sender</h1>
+          <p class="text-xs text-teal-100 font-medium">Automatically send SMS text messages directly to mobile phones on birthdays & anniversaries</p>
         </div>
       </div>
       <button id="triggerDispatcherBtn" class="w-full sm:w-auto bg-yellow-400 hover:bg-yellow-300 text-slate-900 px-4 py-2.5 rounded-xl font-semibold text-sm shadow-md hover:shadow-lg transition flex items-center justify-center space-x-2">
         <i class="fa-solid fa-paper-plane"></i>
-        <span>Run Auto-Dispatcher Now</span>
+        <span>Run SMS Auto-Dispatcher Now</span>
       </button>
     </div>
   </header>
@@ -42,17 +42,17 @@
         <i class="fa-solid fa-chart-line"></i>
         <span>Dashboard</span>
       </button>
-      <button onclick="switchTab('occasions')" id="tab-occasions" class="py-4 px-2 text-slate-600 hover:text-indigo-600 transition flex items-center space-x-2">
-        <i class="fa-solid fa-calendar-heart"></i>
-        <span>Scheduled Occasions</span>
+      <button onclick="switchTab('occasions')" id="tab-occasions" class="py-4 px-2 text-slate-600 hover:text-emerald-600 transition flex items-center space-x-2">
+        <i class="fa-solid fa-mobile-screen-button"></i>
+        <span>Scheduled SMS</span>
       </button>
-      <button onclick="switchTab('logs')" id="tab-logs" class="py-4 px-2 text-slate-600 hover:text-indigo-600 transition flex items-center space-x-2">
+      <button onclick="switchTab('logs')" id="tab-logs" class="py-4 px-2 text-slate-600 hover:text-emerald-600 transition flex items-center space-x-2">
         <i class="fa-solid fa-clock-rotate-left"></i>
-        <span>Sent History Logs</span>
+        <span>SMS History Logs</span>
       </button>
-      <button onclick="switchTab('settings')" id="tab-settings" class="py-4 px-2 text-slate-600 hover:text-indigo-600 transition flex items-center space-x-2">
-        <i class="fa-solid fa-gear"></i>
-        <span>Email Settings</span>
+      <button onclick="switchTab('settings')" id="tab-settings" class="py-4 px-2 text-slate-600 hover:text-emerald-600 transition flex items-center space-x-2">
+        <i class="fa-solid fa-sliders"></i>
+        <span>SMS Gateway Settings</span>
       </button>
     </div>
   </nav>
@@ -71,29 +71,29 @@
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
         <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
           <div>
-            <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Total Saved Occasions</p>
+            <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Total Contacts</p>
             <h3 id="statTotal" class="text-3xl font-extrabold text-slate-900 mt-1">0</h3>
           </div>
-          <div class="p-4 bg-indigo-50 text-indigo-600 rounded-2xl">
-            <i class="fa-solid fa-users text-2xl"></i>
+          <div class="p-4 bg-teal-50 text-teal-600 rounded-2xl">
+            <i class="fa-solid fa-address-book text-2xl"></i>
           </div>
         </div>
         <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
           <div>
             <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Upcoming This Month</p>
-            <h3 id="statThisMonth" class="text-3xl font-extrabold text-indigo-600 mt-1">0</h3>
+            <h3 id="statThisMonth" class="text-3xl font-extrabold text-emerald-600 mt-1">0</h3>
           </div>
-          <div class="p-4 bg-purple-50 text-purple-600 rounded-2xl">
+          <div class="p-4 bg-emerald-50 text-emerald-600 rounded-2xl">
             <i class="fa-solid fa-cake-candles text-2xl"></i>
           </div>
         </div>
         <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
           <div>
-            <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Successfully Sent</p>
-            <h3 id="statSent" class="text-3xl font-extrabold text-emerald-600 mt-1">0</h3>
+            <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">SMS Delivered</p>
+            <h3 id="statSent" class="text-3xl font-extrabold text-cyan-600 mt-1">0</h3>
           </div>
-          <div class="p-4 bg-emerald-50 text-emerald-600 rounded-2xl">
-            <i class="fa-solid fa-circle-check text-2xl"></i>
+          <div class="p-4 bg-cyan-50 text-cyan-600 rounded-2xl">
+            <i class="fa-solid fa-comment-dots text-2xl"></i>
           </div>
         </div>
       </div>
@@ -101,31 +101,31 @@
       <!-- Quick Actions Header -->
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4">
         <div>
-          <h2 class="text-xl font-bold text-slate-900">Today's & Upcoming Special Days</h2>
-          <p class="text-sm text-slate-500">Occasions scheduled for automatic sending</p>
+          <h2 class="text-xl font-bold text-slate-900">Scheduled Text Messages</h2>
+          <p class="text-sm text-slate-500">Automated SMS messages scheduled for auto-delivery</p>
         </div>
-        <button onclick="openOccasionModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl text-sm font-medium shadow-sm transition flex items-center justify-center space-x-2">
+        <button onclick="openOccasionModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl text-sm font-medium shadow-sm transition flex items-center justify-center space-x-2">
           <i class="fa-solid fa-plus"></i>
-          <span>Add New Occasion</span>
+          <span>Add New SMS Contact</span>
         </button>
       </div>
 
-      <!-- Dashboard Table / List -->
+      <!-- Dashboard Table -->
       <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <div class="overflow-x-auto">
           <table class="w-full text-left border-collapse">
             <thead class="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wider">
               <tr>
                 <th class="px-6 py-4">Recipient</th>
+                <th class="px-6 py-4">Mobile Phone</th>
                 <th class="px-6 py-4">Occasion</th>
                 <th class="px-6 py-4">Date</th>
-                <th class="px-6 py-4">Status</th>
                 <th class="px-6 py-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody id="dashboardTableBody" class="divide-y divide-slate-100 text-sm">
               <tr>
-                <td colspan="5" class="px-6 py-12 text-center text-slate-400">Loading occasions...</td>
+                <td colspan="5" class="px-6 py-12 text-center text-slate-400">Loading scheduled SMS...</td>
               </tr>
             </tbody>
           </table>
@@ -137,12 +137,12 @@
     <div id="view-occasions" class="hidden space-y-6">
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 class="text-xl font-bold text-slate-900">All Scheduled Occasions</h2>
-          <p class="text-sm text-slate-500">Manage contacts, dates, and personalized templates</p>
+          <h2 class="text-xl font-bold text-slate-900">All Scheduled SMS Messages</h2>
+          <p class="text-sm text-slate-500">Manage recipient mobile numbers and personalized text templates</p>
         </div>
-        <button onclick="openOccasionModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl text-sm font-medium shadow-sm transition flex items-center justify-center space-x-2">
+        <button onclick="openOccasionModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl text-sm font-medium shadow-sm transition flex items-center justify-center space-x-2">
           <i class="fa-solid fa-plus"></i>
-          <span>Add New Occasion</span>
+          <span>Add New SMS Contact</span>
         </button>
       </div>
 
@@ -150,9 +150,9 @@
       <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row gap-4">
         <div class="relative flex-grow">
           <i class="fa-solid fa-magnifying-glass absolute left-4 top-3.5 text-slate-400"></i>
-          <input type="text" id="searchInput" placeholder="Search by recipient name or email..." class="w-full pl-11 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          <input type="text" id="searchInput" placeholder="Search by recipient name or phone number..." class="w-full pl-11 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
         </div>
-        <select id="filterType" class="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        <select id="filterType" class="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
           <option value="ALL">All Occasions</option>
           <option value="Birthday">Birthdays</option>
           <option value="Anniversary">Anniversaries</option>
@@ -160,17 +160,15 @@
         </select>
       </div>
 
-      <!-- Occasions Cards Grid for Mobile & Desktop -->
-      <div id="occasionsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <!-- Cards inserted dynamically -->
-      </div>
+      <!-- Occasions Cards Grid -->
+      <div id="occasionsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
     </div>
 
     <!-- VIEW: SENT HISTORY LOGS -->
     <div id="view-logs" class="hidden space-y-6">
       <div>
-        <h2 class="text-xl font-bold text-slate-900">Auto-Sent History Logs</h2>
-        <p class="text-sm text-slate-500">Audit trail of messages automatically sent to recipients</p>
+        <h2 class="text-xl font-bold text-slate-900">Sent SMS History Logs</h2>
+        <p class="text-sm text-slate-500">Audit trail of SMS text messages delivered to recipients</p>
       </div>
 
       <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
@@ -180,14 +178,14 @@
               <tr>
                 <th class="px-6 py-4">Time Sent</th>
                 <th class="px-6 py-4">Recipient</th>
-                <th class="px-6 py-4">Occasion</th>
+                <th class="px-6 py-4">Mobile Phone</th>
                 <th class="px-6 py-4">Status</th>
                 <th class="px-6 py-4">Details</th>
               </tr>
             </thead>
             <tbody id="logsTableBody" class="divide-y divide-slate-100 text-sm">
               <tr>
-                <td colspan="5" class="px-6 py-12 text-center text-slate-400">Loading log history...</td>
+                <td colspan="5" class="px-6 py-12 text-center text-slate-400">Loading SMS log history...</td>
               </tr>
             </tbody>
           </table>
@@ -195,57 +193,41 @@
       </div>
     </div>
 
-    <!-- VIEW: EMAIL SETTINGS -->
+    <!-- VIEW: SMS SETTINGS -->
     <div id="view-settings" class="hidden space-y-6 max-w-3xl mx-auto">
       <div>
-        <h2 class="text-xl font-bold text-slate-900">Email Dispatcher Settings</h2>
-        <p class="text-sm text-slate-500">Configure custom SMTP or use the built-in free test account</p>
+        <h2 class="text-xl font-bold text-slate-900">SMS Gateway Configuration</h2>
+        <p class="text-sm text-slate-500">Connect Twilio or free SMS API key for real mobile text delivery</p>
       </div>
 
       <div class="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-sm space-y-6">
         <form id="settingsForm" class="space-y-5">
-          <div class="bg-amber-50 border border-amber-200 p-4 rounded-xl text-xs text-amber-800 space-y-1">
-            <p class="font-bold flex items-center space-x-1">
-              <i class="fa-solid fa-lightbulb text-amber-600"></i>
-              <span>Free Account Mode Active</span>
+          <div class="bg-emerald-50 border border-emerald-200 p-4 rounded-xl text-xs text-emerald-900 space-y-1">
+            <p class="font-bold flex items-center space-x-1 text-emerald-700">
+              <i class="fa-solid fa-circle-info"></i>
+              <span>Twilio Free Trial Credentials</span>
             </p>
-            <p>If you leave SMTP settings empty, the app automatically uses a free Ethereal Email test server. Messages will generate instant preview URLs in the Sent Logs!</p>
+            <p>Get a free Twilio account at <a href="https://www.twilio.com" target="_blank" class="underline font-bold">twilio.com</a> to receive free SMS trial credits and send real text messages to mobile phones!</p>
           </div>
 
           <div>
-            <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Sender Name</label>
-            <input type="text" id="setting_sender_name" placeholder="e.g. John Doe" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Twilio Account SID</label>
+            <input type="text" id="setting_twilio_account_sid" placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
           </div>
 
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">SMTP Host</label>
-              <input type="text" id="setting_smtp_host" placeholder="smtp.gmail.com" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-            </div>
-            <div>
-              <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">SMTP Port</label>
-              <input type="number" id="setting_smtp_port" placeholder="587" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-            </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Twilio Auth Token</label>
+            <input type="password" id="setting_twilio_auth_token" placeholder="••••••••" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
           </div>
 
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">SMTP Username / Email</label>
-              <input type="email" id="setting_smtp_user" placeholder="you@gmail.com" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-            </div>
-            <div>
-              <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">SMTP Password / App Pass</label>
-              <input type="password" id="setting_smtp_pass" placeholder="••••••••" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-            </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Twilio Sender Phone Number</label>
+            <input type="text" id="setting_twilio_phone_number" placeholder="+1234567890" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
           </div>
 
-          <div class="pt-4 flex flex-col sm:flex-row gap-3">
-            <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-xl font-medium text-sm shadow-sm transition flex-grow justify-center">
-              Save Settings
-            </button>
-            <button type="button" id="testSmtpBtn" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-6 py-2.5 rounded-xl font-medium text-sm transition flex items-center justify-center space-x-2">
-              <i class="fa-solid fa-vial"></i>
-              <span>Test Connection</span>
+          <div class="pt-4">
+            <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2.5 rounded-xl font-medium text-sm shadow-sm transition justify-center">
+              Save SMS Settings
             </button>
           </div>
         </form>
@@ -256,14 +238,14 @@
 
   <!-- MODAL: ADD / EDIT OCCASION -->
   <div id="occasionModal" class="hidden fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-    <div class="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl space-y-6 relative border border-slate-100 transform transition-all">
+    <div class="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl space-y-6 relative border border-slate-100">
       <button onclick="closeOccasionModal()" class="absolute top-5 right-5 text-slate-400 hover:text-slate-600 text-xl">
         <i class="fa-solid fa-xmark"></i>
       </button>
 
       <div>
-        <h3 id="modalTitle" class="text-xl font-bold text-slate-900">Add Scheduled Occasion</h3>
-        <p class="text-xs text-slate-500">Messages will automatically send to recipient on this day</p>
+        <h3 id="modalTitle" class="text-xl font-bold text-slate-900">Add SMS Occasion</h3>
+        <p class="text-xs text-slate-500">Text message will automatically send to mobile phone on this date</p>
       </div>
 
       <form id="occasionForm" class="space-y-4">
@@ -271,24 +253,19 @@
 
         <div>
           <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Recipient Name *</label>
-          <input type="text" id="recipient_name" required placeholder="e.g. Sarah Connor" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+          <input type="text" id="recipient_name" required placeholder="e.g. Sarah Connor" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Recipient Email *</label>
-            <input type="email" id="recipient_email" required placeholder="sarah@example.com" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-          </div>
-          <div>
-            <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Recipient Phone (Optional)</label>
-            <input type="tel" id="recipient_phone" placeholder="+1234567890" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-          </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Recipient Mobile Phone Number *</label>
+          <input type="tel" id="recipient_phone" required placeholder="+1234567890 or +919876543210" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+          <p class="text-[11px] text-slate-400 mt-1">Include country code (e.g., +91 for India, +1 for US/Canada).</p>
         </div>
 
         <div class="grid grid-cols-3 gap-3">
           <div class="col-span-1">
             <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Occasion *</label>
-            <select id="occasion_type" required class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            <select id="occasion_type" required class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
               <option value="Birthday">Birthday 🎂</option>
               <option value="Anniversary">Anniversary ❤️</option>
               <option value="Custom">Custom 🎉</option>
@@ -296,7 +273,7 @@
           </div>
           <div class="col-span-1">
             <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Month *</label>
-            <select id="date_month" required class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            <select id="date_month" required class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
               <option value="1">Jan (01)</option>
               <option value="2">Feb (02)</option>
               <option value="3">Mar (03)</option>
@@ -313,22 +290,22 @@
           </div>
           <div class="col-span-1">
             <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Day *</label>
-            <input type="number" id="date_day" required min="1" max="31" placeholder="1-31" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            <input type="number" id="date_day" required min="1" max="31" placeholder="1-31" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
           </div>
         </div>
 
         <div>
-          <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Custom Message Template *</label>
-          <textarea id="custom_message" rows="4" required placeholder="Wishing you the happiest {occasion}, {name}! May your day be filled with joy and laughter!" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"></textarea>
-          <p class="text-[11px] text-slate-400 mt-1">Placeholders: <code class="bg-slate-100 px-1 py-0.5 rounded text-indigo-600">{name}</code>, <code class="bg-slate-100 px-1 py-0.5 rounded text-indigo-600">{occasion}</code> will be auto-replaced.</p>
+          <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Custom SMS Text Message *</label>
+          <textarea id="custom_message" rows="3" required placeholder="Wishing you the happiest {occasion}, {name}! May your day be filled with endless joy!" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none"></textarea>
+          <p class="text-[11px] text-slate-400 mt-1">Placeholders: <code class="bg-slate-100 px-1 py-0.5 rounded text-emerald-600">{name}</code>, <code class="bg-slate-100 px-1 py-0.5 rounded text-emerald-600">{occasion}</code></p>
         </div>
 
         <div class="pt-3 flex justify-end space-x-3">
           <button type="button" onclick="closeOccasionModal()" class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-medium transition">
             Cancel
           </button>
-          <button type="submit" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-medium transition shadow-sm">
-            Save Occasion
+          <button type="submit" class="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-medium transition shadow-sm">
+            Save SMS Contact
           </button>
         </div>
       </form>
@@ -337,7 +314,7 @@
 
   <!-- Footer -->
   <footer class="bg-white border-t border-slate-200 py-6 text-center text-xs text-slate-400">
-    <p>Occasion Auto-Sender &copy; 2026. Fully Automated, Secure & Responsive.</p>
+    <p>Occasion SMS Auto-Sender &copy; 2026. Automatic Mobile Text Message Sender.</p>
   </footer>
 
   <script src="app.js"></script>
