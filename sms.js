@@ -5,9 +5,8 @@ const { sendOccasionEmail } = require('./mailer');
 
 async function sendOccasionSMS({ toPhone, carrierGateway, recipientName, occasionType, customMessage }) {
   const provider = await dbQuery.get('SELECT value FROM settings WHERE key = "sms_provider"');
-  const providerType = provider?.value || 'whatsapp_cloud'; // 'whatsapp_cloud', 'fast2sms', 'email_to_sms'
+  const providerType = provider?.value || 'whatsapp_cloud';
 
-  // Format message text
   let formattedMessage = customMessage
     .replace(/\{name\}/gi, recipientName)
     .replace(/\{occasion\}/gi, occasionType);
@@ -21,23 +20,23 @@ async function sendOccasionSMS({ toPhone, carrierGateway, recipientName, occasio
   }
 
   // -------------------------------------------------------------------
-  // METHOD 1: OFFICIAL META WHATSAPP CLOUD API (100% Background, 1,000 Free/Month)
+  // METHOD 1: META WHATSAPP CLOUD API (100% Background)
   // -------------------------------------------------------------------
   if (providerType === 'whatsapp_cloud') {
     const waToken = await dbQuery.get('SELECT value FROM settings WHERE key = "whatsapp_cloud_token"');
     const waPhoneId = await dbQuery.get('SELECT value FROM settings WHERE key = "whatsapp_cloud_phone_id"');
 
     if (!waToken?.value || !waPhoneId?.value) {
-      // Fallback: If Meta WhatsApp Cloud credentials not configured yet, generate direct WhatsApp link
       const waLink = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(smsText)}`;
       return {
         status: 'SUCCESS',
         messageId: `wa-link-${Date.now()}`,
-        details: `WhatsApp Link Created for ${cleanPhone}. (Add WhatsApp Cloud API Token in Settings for 100% background auto-send)`,
+        details: `WhatsApp Link Created for +${cleanPhone}: ${waLink}`,
         whatsappUrl: waLink
       };
     }
 
+    // Try text payload first, then fallback to template if restricted
     return new Promise((resolve, reject) => {
       const postData = JSON.stringify({
         messaging_product: 'whatsapp',
@@ -52,7 +51,7 @@ async function sendOccasionSMS({ toPhone, carrierGateway, recipientName, occasio
         path: `/v18.0/${waPhoneId.value}/messages`,
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${waToken.value}`,
+          'Authorization': `Bearer ${waToken.value.trim()}`,
           'Content-Type': 'application/json',
           'Content-Length': Buffer.byteLength(postData)
         }
@@ -70,6 +69,9 @@ async function sendOccasionSMS({ toPhone, carrierGateway, recipientName, occasio
                 messageId: parsed.messages ? parsed.messages[0].id : `wa-cloud-${Date.now()}`,
                 details: `WhatsApp Cloud API automated background message sent to +${cleanPhone}`
               });
+            } else if (parsed.error && (parsed.error.code === 190 || parsed.error.code === 100)) {
+              // Token expired error (code 190)
+              reject(new Error(`Meta WhatsApp Token Error: ${parsed.error.message}. Please click "Generate new token" on Meta Developer page and save in Settings.`));
             } else {
               reject(new Error(parsed.error ? parsed.error.message : `WhatsApp Cloud error ${res.statusCode}`));
             }
@@ -86,7 +88,7 @@ async function sendOccasionSMS({ toPhone, carrierGateway, recipientName, occasio
   }
 
   // -------------------------------------------------------------------
-  // METHOD 2: FAST2SMS API (DLT-Free Quick SMS Route)
+  // METHOD 2: FAST2SMS API
   // -------------------------------------------------------------------
   if (providerType === 'fast2sms') {
     const apiKey = await dbQuery.get('SELECT value FROM settings WHERE key = "fast2sms_api_key"');
@@ -140,7 +142,7 @@ async function sendOccasionSMS({ toPhone, carrierGateway, recipientName, occasio
   }
 
   // -------------------------------------------------------------------
-  // METHOD 3: 100% FREE AUTOMATED EMAIL
+  // METHOD 3: FREE EMAIL
   // -------------------------------------------------------------------
   let smsEmail = toPhone;
   if (!toPhone.includes('@')) {

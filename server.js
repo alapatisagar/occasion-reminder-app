@@ -136,7 +136,6 @@ app.post('/api/send-now/:id', async (req, res) => {
     const idInt = parseInt(req.params.id, 10);
     let occasion = await dbQuery.get(`SELECT * FROM occasions WHERE id = ?`, [idInt]);
 
-    // Fallback: If exact ID not found, fetch latest created occasion
     if (!occasion) {
       occasion = await dbQuery.get(`SELECT * FROM occasions ORDER BY id DESC LIMIT 1`);
     }
@@ -160,19 +159,19 @@ app.post('/api/send-now/:id', async (req, res) => {
       [occasion.id, occasion.recipient_name, toPhone, occasion.occasion_type, sendResult.status, sendResult.details]
     );
 
-    res.json({ message: `SMS Text Message attempt finished for ${occasion.recipient_name} (${toPhone})!`, details: sendResult });
+    res.json({ message: `Message attempt finished for ${occasion.recipient_name} (${toPhone})!`, details: sendResult });
   } catch (err) {
     await dbQuery.run(
       `INSERT INTO logs (occasion_id, recipient_name, recipient_email, occasion_type, status, details)
        VALUES (?, ?, ?, ?, 'FAILED', ?)`,
       [parseInt(req.params.id, 10) || 0, 'Recipient', 'Unknown', 'SMS', err.message]
     );
-    res.status(500).json({ error: err.message || 'Failed to send SMS' });
+    res.status(500).json({ error: err.message || 'Failed to send message' });
   }
 });
 
 // -------------------------------------------------------------
-// API ROUTES: LOGS & SETTINGS
+// API ROUTES: LOGS & SETTINGS (PERSISTENT WITHOUT DATA LOSS ON REFRESH)
 // -------------------------------------------------------------
 
 app.get('/api/logs', async (req, res) => {
@@ -184,12 +183,13 @@ app.get('/api/logs', async (req, res) => {
   }
 });
 
+// Return actual settings values so form refresh NEVER loses tokens
 app.get('/api/settings', async (req, res) => {
   try {
     const settings = await dbQuery.all(`SELECT key, value FROM settings`);
     const settingsObj = {};
     settings.forEach(row => {
-      settingsObj[row.key] = row.key.includes('token') || row.key.includes('pass') ? '••••••••' : row.value;
+      settingsObj[row.key] = row.value;
     });
     res.json(settingsObj);
   } catch (err) {
@@ -197,14 +197,15 @@ app.get('/api/settings', async (req, res) => {
   }
 });
 
+// Save settings safely - never overwrite with empty string
 app.post('/api/settings', async (req, res) => {
   try {
     const settings = req.body;
     for (const [key, value] of Object.entries(settings)) {
-      if (value === '••••••••') continue;
+      if (value === undefined || value === null || String(value).trim() === '') continue; // Don't overwrite with empty
       await dbQuery.run(
         `INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
-        [key, value]
+        [key, String(value).trim()]
       );
     }
     res.json({ message: 'Settings saved successfully' });
